@@ -1,4 +1,4 @@
-import { ProcessoResult, DjenResult, SearchParams } from "@/types";
+import { ProcessoResult, DjenResult, ComunicacaoResult, SearchParams } from "@/types";
 
 const BASE = "https://datajud-proxy.fabio-6f1.workers.dev";
 
@@ -149,7 +149,7 @@ export async function buscarDjen(params: SearchParams): Promise<DjenResult[]> {
     signal: AbortSignal.timeout(15000),
   });
 
-  if (!res.ok) throw new Error(`DJEN retornou HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Comunicações retornou HTTP ${res.status}`);
 
   const data = await res.json();
   return (data?.hits?.hits ?? []).map((h: { _id: string; _source: Record<string, unknown> }) => ({
@@ -161,4 +161,29 @@ export async function buscarDjen(params: SearchParams): Promise<DjenResult[]> {
     texto: h._source.texto ?? "",
     siglaTribunal: h._source.siglaTribunal ?? "CNJ",
   }));
+}
+
+export async function buscarComunicacoes(params: SearchParams): Promise<ComunicacaoResult[]> {
+  const { valor, dataInicio, dataFim } = params;
+
+  // Parse "59531PR" or "59531/PR" → numeroOab + estadoOab
+  const match = valor.trim().match(/^(\d+)\s*[/\-]?\s*([A-Za-z]{2})$/);
+  const numeroOab = match ? match[1] : valor.replace(/\D/g, "");
+  const estadoOab = match ? match[2].toUpperCase() : "";
+
+  const query = new URLSearchParams({ size: "20" });
+  if (numeroOab) query.set("numeroOab", numeroOab);
+  if (estadoOab) query.set("estadoOab", estadoOab);
+  if (dataInicio) query.set("dataDisponibilizacaoInicio", dataInicio);
+  if (dataFim) query.set("dataDisponibilizacaoFim", dataFim);
+
+  const res = await fetch(
+    `https://comunicaapi.pje.jus.br/api/v1/comunicacao?${query.toString()}`,
+    { signal: AbortSignal.timeout(15000) }
+  );
+
+  if (!res.ok) throw new Error(`Comunicações retornou HTTP ${res.status}`);
+
+  const data = await res.json();
+  return data?.items ?? [];
 }

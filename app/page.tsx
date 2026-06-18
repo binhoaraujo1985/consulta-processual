@@ -4,22 +4,25 @@ import { useState } from "react";
 import SearchForm from "@/components/SearchForm";
 import ProcessoCard from "@/components/ProcessoCard";
 import DjenCard from "@/components/DjenCard";
-import { buscarProcessos, buscarDjen } from "@/lib/datajud";
-import { ProcessoResult, DjenResult, SearchParams } from "@/types";
+import ComunicacaoCard from "@/components/ComunicacaoCard";
+import { buscarProcessos, buscarDjen, buscarComunicacoes } from "@/lib/datajud";
+import { ProcessoResult, DjenResult, ComunicacaoResult, SearchParams } from "@/types";
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [processos, setProcessos] = useState<ProcessoResult[]>([]);
   const [djenResults, setDjenResults] = useState<DjenResult[]>([]);
+  const [comunicacoes, setComunicacoes] = useState<ComunicacaoResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
-  const [activeTab, setActiveTab] = useState<"datajud" | "djen">("datajud");
+  const [activeTab, setActiveTab] = useState<"datajud" | "djen" | "comunicacoes">("datajud");
 
   async function handleSearch(params: SearchParams) {
     setLoading(true);
     setError(null);
     setProcessos([]);
     setDjenResults([]);
+    setComunicacoes([]);
     setSearched(true);
 
     try {
@@ -28,16 +31,9 @@ export default function Home() {
         setDjenResults(results);
         setActiveTab("djen");
       } else if (params.tipo === "oab") {
-        // OAB: busca nos processos e também no DJEN (que menciona OAB nas publicações)
-        const [proc, djen] = await Promise.allSettled([
-          buscarProcessos(params),
-          buscarDjen({ ...params, tipo: "djen" }),
-        ]);
-        const p = proc.status === "fulfilled" ? proc.value : [];
-        const d = djen.status === "fulfilled" ? djen.value : [];
-        setProcessos(p);
-        setDjenResults(d);
-        setActiveTab(d.length > 0 ? "djen" : "datajud");
+        const results = await buscarComunicacoes(params);
+        setComunicacoes(results);
+        setActiveTab("comunicacoes");
       } else {
         const results = await buscarProcessos(params);
         setProcessos(results);
@@ -50,7 +46,10 @@ export default function Home() {
     }
   }
 
-  const total = activeTab === "datajud" ? processos.length : djenResults.length;
+  const total =
+    activeTab === "datajud" ? processos.length :
+    activeTab === "djen" ? djenResults.length :
+    comunicacoes.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -89,6 +88,7 @@ export default function Home() {
             </p>
             {activeTab === "datajud" && processos.map((p, i) => <ProcessoCard key={i} processo={p} />)}
             {activeTab === "djen" && djenResults.map((d, i) => <DjenCard key={i} item={d} />)}
+            {activeTab === "comunicacoes" && comunicacoes.map((c, i) => <ComunicacaoCard key={i} item={c} />)}
           </div>
         )}
 

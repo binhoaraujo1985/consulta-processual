@@ -44,3 +44,23 @@ export interface DjenResult {
   texto: string;
   siglaTribunal: string;
 }
+
+export interface ComunicacaoResult {
+  id: number;
+  data_disponibilizacao: string;
+  datadisponibilizacao: string;
+  siglaTribunal: string;
+  tipoComunicacao: string;
+  nomeOrgao: string;
+  texto: string;
+  numero_processo: string;
+  numeroprocessocommascara: string;
+  link: string;
+  tipoDocumento: string;
+  nomeClasse: string;
+  meiocompleto: string;
+  destinatarios: { nome: string; polo: string }[];
+  destinatarioadvogados: {
+    advogado: { nome: string; numero_oab: string; uf_oab: string };
+  }[];
+}
