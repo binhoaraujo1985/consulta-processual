@@ -60,25 +60,12 @@ function buildQuery(params: SearchParams) {
     };
   } else if (tipo === "parte") {
     main = {
-      nested: {
-        path: "partes",
-        query: { match: { "partes.nome": { query: valor, operator: "and" } } },
-      },
+      match: { "partes.nome": { query: valor, operator: "and" } },
     };
   } else {
     const num = valor.replace(/\D/g, "");
     main = {
-      nested: {
-        path: "partes",
-        query: {
-          nested: {
-            path: "partes.advogados",
-            query: {
-              match: { "partes.advogados.numeroOAB": num },
-            },
-          },
-        },
-      },
+      match: { "partes.advogados.numeroOAB": num },
     };
   }
 
