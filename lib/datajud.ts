@@ -1,6 +1,6 @@
 import { ProcessoResult, DjenResult, SearchParams } from "@/types";
 
-const BASE = "https://api-publica.datajud.cnj.jus.br";
+const BASE = "https://datajud-proxy.fabio-6f1.workers.dev";
 
 // Chave pública demonstrativa do CNJ — troque pela sua em datajud-wiki.cnj.jus.br
 const API_KEY =
