@@ -185,5 +185,17 @@ export async function buscarComunicacoes(params: SearchParams): Promise<Comunica
   if (!res.ok) throw new Error(`Comunicações retornou HTTP ${res.status}`);
 
   const data = await res.json();
-  return data?.items ?? [];
+  const items: ComunicacaoResult[] = data?.items ?? [];
+
+  // Filtra para garantir que o advogado com esse OAB está nos destinatários
+  if (numeroOab) {
+    return items.filter((item) =>
+      item.destinatarioadvogados?.some(
+        (d) =>
+          d.advogado?.numero_oab === numeroOab &&
+          (!estadoOab || d.advogado?.uf_oab?.toUpperCase() === estadoOab)
+      )
+    );
+  }
+  return items;
 }
