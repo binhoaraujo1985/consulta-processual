@@ -179,7 +179,7 @@ export async function buscarComunicacoes(params: SearchParams): Promise<Comunica
 
   const res = await fetch(
     `https://comunicaapi.pje.jus.br/api/v1/comunicacao?${query.toString()}`,
-    { signal: AbortSignal.timeout(15000) }
+    { signal: AbortSignal.timeout(30000) }
   );
 
   if (!res.ok) throw new Error(`Comunicações retornou HTTP ${res.status}`);
