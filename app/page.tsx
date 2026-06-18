@@ -27,6 +27,17 @@ export default function Home() {
         const results = await buscarDjen(params);
         setDjenResults(results);
         setActiveTab("djen");
+      } else if (params.tipo === "oab") {
+        // OAB: busca nos processos e também no DJEN (que menciona OAB nas publicações)
+        const [proc, djen] = await Promise.allSettled([
+          buscarProcessos(params),
+          buscarDjen({ ...params, tipo: "djen" }),
+        ]);
+        const p = proc.status === "fulfilled" ? proc.value : [];
+        const d = djen.status === "fulfilled" ? djen.value : [];
+        setProcessos(p);
+        setDjenResults(d);
+        setActiveTab(d.length > 0 ? "djen" : "datajud");
       } else {
         const results = await buscarProcessos(params);
         setProcessos(results);
