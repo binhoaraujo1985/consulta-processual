@@ -66,17 +66,11 @@ function buildQuery(params: SearchParams) {
       },
     };
   } else {
-    const m = valor.match(/^(\d+)\s*([A-Z]{2})?$/i);
-    const num = m?.[1] ?? valor.replace(/\D/g, "");
+    const num = valor.replace(/\D/g, "");
     main = {
-      nested: {
-        path: "partes",
-        query: {
-          nested: {
-            path: "partes.advogados",
-            query: { match: { "partes.advogados.numeroOAB": num } },
-          },
-        },
+      multi_match: {
+        query: num,
+        fields: ["partes.advogados.numeroOAB"],
       },
     };
   }
