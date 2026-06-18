@@ -7,6 +7,7 @@ export default function ComunicacaoCard({ item }: { item: ComunicacaoResult }) {
   const [expanded, setExpanded] = useState(false);
 
   const partes = item.destinatarios ?? [];
+  const advogados = item.destinatarioadvogados ?? [];
   const polo = (p: string) => (p === "A" ? "Ativo" : p === "P" ? "Passivo" : p);
 
   return (
@@ -39,6 +40,19 @@ export default function ComunicacaoCard({ item }: { item: ComunicacaoResult }) {
             <div>
               <span className="font-medium text-gray-600">Classe: </span>
               <span className="text-gray-800">{item.nomeClasse}</span>
+            </div>
+          )}
+
+          {advogados.length > 0 && (
+            <div>
+              <p className="font-medium text-gray-600 mb-1">Advogado(s) destinatário(s):</p>
+              <ul className="space-y-0.5">
+                {advogados.map((a, i) => (
+                  <li key={i} className="text-gray-700 text-xs">
+                    {a.advogado?.nome} — OAB {a.advogado?.numero_oab}/{a.advogado?.uf_oab}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
