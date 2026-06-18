@@ -68,9 +68,16 @@ function buildQuery(params: SearchParams) {
   } else {
     const num = valor.replace(/\D/g, "");
     main = {
-      query_string: {
-        query: num,
-        default_field: "partes.advogados.numeroOAB",
+      nested: {
+        path: "partes",
+        query: {
+          nested: {
+            path: "partes.advogados",
+            query: {
+              match: { "partes.advogados.numeroOAB": num },
+            },
+          },
+        },
       },
     };
   }
