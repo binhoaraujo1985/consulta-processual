@@ -67,17 +67,14 @@ function buildQuery(params: SearchParams) {
     };
   } else {
     const m = valor.match(/^(\d+)\s*([A-Z]{2})?$/i);
-    const num = m?.[1] ?? valor;
-    const uf = m?.[2]?.toUpperCase();
-    const must: unknown[] = [{ match: { "partes.advogados.numeroOAB": num } }];
-    if (uf) must.push({ match: { "partes.advogados.estadoOAB": uf } });
+    const num = m?.[1] ?? valor.replace(/\D/g, "");
     main = {
       nested: {
         path: "partes",
         query: {
           nested: {
             path: "partes.advogados",
-            query: { bool: { must } },
+            query: { match: { "partes.advogados.numeroOAB": num } },
           },
         },
       },
