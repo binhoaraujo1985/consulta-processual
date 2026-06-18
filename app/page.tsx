@@ -10,9 +10,14 @@ import { ProcessoResult, DjenResult, ComunicacaoResult, SearchParams } from "@/t
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [processos, setProcessos] = useState<ProcessoResult[]>([]);
   const [djenResults, setDjenResults] = useState<DjenResult[]>([]);
   const [comunicacoes, setComunicacoes] = useState<ComunicacaoResult[]>([]);
+  const [totalComunicacoes, setTotalComunicacoes] = useState(0);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [currentParams, setCurrentParams] = useState<SearchParams | null>(null);
+  const [tribunalFiltro, setTribunalFiltro] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [activeTab, setActiveTab] = useState<"datajud" | "djen" | "comunicacoes">("datajud");
@@ -23,6 +28,10 @@ export default function Home() {
     setProcessos([]);
     setDjenResults([]);
     setComunicacoes([]);
+    setTotalComunicacoes(0);
+    setPaginaAtual(1);
+    setTribunalFiltro("");
+    setCurrentParams(params);
     setSearched(true);
 
     try {
@@ -31,8 +40,9 @@ export default function Home() {
         setDjenResults(results);
         setActiveTab("djen");
       } else if (params.tipo === "oab") {
-        const results = await buscarComunicacoes(params);
-        setComunicacoes(results);
+        const { items, total } = await buscarComunicacoes(params, 1);
+        setComunicacoes(items);
+        setTotalComunicacoes(total);
         setActiveTab("comunicacoes");
       } else {
         const results = await buscarProcessos(params);
@@ -46,10 +56,34 @@ export default function Home() {
     }
   }
 
+  async function handleCarregarMais() {
+    if (!currentParams) return;
+    const proxPagina = paginaAtual + 1;
+    setLoadingMore(true);
+    try {
+      const { items } = await buscarComunicacoes(currentParams, proxPagina);
+      setComunicacoes((prev) => [...prev, ...items]);
+      setPaginaAtual(proxPagina);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erro ao carregar mais");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  // Tribunais disponíveis nos resultados carregados
+  const tribunaisDisponiveis = Array.from(
+    new Set(comunicacoes.map((c) => c.siglaTribunal).filter(Boolean))
+  ).sort();
+
+  const comunicacoesFiltradas = tribunalFiltro
+    ? comunicacoes.filter((c) => c.siglaTribunal === tribunalFiltro)
+    : comunicacoes;
+
   const total =
     activeTab === "datajud" ? processos.length :
     activeTab === "djen" ? djenResults.length :
-    comunicacoes.length;
+    comunicacoesFiltradas.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -73,22 +107,70 @@ export default function Home() {
         {error && (
           <div className="mt-6 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
             <strong>Erro:</strong> {error}
-            {error.includes("CORS") || error.includes("fetch") ? (
-              <p className="mt-1 text-xs">
-                O DataJud pode estar bloqueando requisições diretas do navegador. Verifique se sua chave de API tem permissão CORS ou use a versão com servidor.
-              </p>
-            ) : null}
           </div>
         )}
 
         {searched && !loading && !error && (
           <div className="mt-6">
-            <p className="text-sm text-gray-500 mb-4">
-              {total === 0 ? "Nenhum resultado encontrado." : `${total} resultado(s) encontrado(s)`}
-            </p>
+            {/* Cabeçalho de resultados */}
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <p className="text-sm text-gray-500">
+                {total === 0
+                  ? "Nenhum resultado encontrado."
+                  : activeTab === "comunicacoes"
+                  ? `${comunicacoesFiltradas.length} exibido(s) de ${totalComunicacoes} comunicações`
+                  : `${total} resultado(s) encontrado(s)`}
+              </p>
+            </div>
+
+            {/* Filtro por tribunal (só para OAB) */}
+            {activeTab === "comunicacoes" && tribunaisDisponiveis.length > 1 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => setTribunalFiltro("")}
+                  className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                    tribunalFiltro === ""
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                  }`}
+                >
+                  Todos
+                </button>
+                {tribunaisDisponiveis.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTribunalFiltro(t === tribunalFiltro ? "" : t)}
+                    className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                      tribunalFiltro === t
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Resultados */}
             {activeTab === "datajud" && processos.map((p, i) => <ProcessoCard key={i} processo={p} />)}
             {activeTab === "djen" && djenResults.map((d, i) => <DjenCard key={i} item={d} />)}
-            {activeTab === "comunicacoes" && comunicacoes.map((c, i) => <ComunicacaoCard key={i} item={c} />)}
+            {activeTab === "comunicacoes" && comunicacoesFiltradas.map((c, i) => (
+              <ComunicacaoCard key={`${c.id}-${i}`} item={c} />
+            ))}
+
+            {/* Botão Carregar Mais */}
+            {activeTab === "comunicacoes" && comunicacoes.length < totalComunicacoes && !tribunalFiltro && (
+              <div className="mt-6 text-center">
+                <button
+                  onClick={handleCarregarMais}
+                  disabled={loadingMore}
+                  className="px-6 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {loadingMore ? "Carregando..." : `Carregar mais (${totalComunicacoes - comunicacoes.length} restantes)`}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

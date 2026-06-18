@@ -163,15 +163,22 @@ export async function buscarDjen(params: SearchParams): Promise<DjenResult[]> {
   }));
 }
 
-export async function buscarComunicacoes(params: SearchParams): Promise<ComunicacaoResult[]> {
-  const { valor, dataInicio, dataFim } = params;
-
-  // Parse "59531PR" or "59531/PR" → numeroOab + estadoOab
+export function parseOab(valor: string): { numeroOab: string; estadoOab: string } {
   const match = valor.trim().match(/^(\d+)\s*[/\-]?\s*([A-Za-z]{2})$/);
-  const numeroOab = match ? match[1] : valor.replace(/\D/g, "");
-  const estadoOab = match ? match[2].toUpperCase() : "";
+  return {
+    numeroOab: match ? match[1] : valor.replace(/\D/g, ""),
+    estadoOab: match ? match[2].toUpperCase() : "",
+  };
+}
 
-  const query = new URLSearchParams({ size: "20" });
+export async function buscarComunicacoes(
+  params: SearchParams,
+  pagina = 1
+): Promise<{ items: ComunicacaoResult[]; total: number }> {
+  const { valor, dataInicio, dataFim } = params;
+  const { numeroOab, estadoOab } = parseOab(valor);
+
+  const query = new URLSearchParams({ pagina: String(pagina) });
   if (numeroOab) query.set("numeroOab", numeroOab);
   if (estadoOab) query.set("estadoOab", estadoOab);
   if (dataInicio) query.set("dataDisponibilizacaoInicio", dataInicio);
@@ -186,16 +193,18 @@ export async function buscarComunicacoes(params: SearchParams): Promise<Comunica
 
   const data = await res.json();
   const items: ComunicacaoResult[] = data?.items ?? [];
+  const total: number = data?.count ?? 0;
 
   // Filtra para garantir que o advogado com esse OAB está nos destinatários
-  if (numeroOab) {
-    return items.filter((item) =>
-      item.destinatarioadvogados?.some(
-        (d) =>
-          d.advogado?.numero_oab === numeroOab &&
-          (!estadoOab || d.advogado?.uf_oab?.toUpperCase() === estadoOab)
+  const filtered = numeroOab
+    ? items.filter((item) =>
+        item.destinatarioadvogados?.some(
+          (d) =>
+            String(d.advogado?.numero_oab) === numeroOab &&
+            (!estadoOab || d.advogado?.uf_oab?.toUpperCase() === estadoOab)
+        )
       )
-    );
-  }
-  return items;
+    : items;
+
+  return { items: filtered, total };
 }
