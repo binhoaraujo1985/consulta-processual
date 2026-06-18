@@ -5,7 +5,7 @@ const BASE = "https://api-publica.datajud.cnj.jus.br";
 // Chave pública demonstrativa do CNJ — troque pela sua em datajud-wiki.cnj.jus.br
 const API_KEY =
   process.env.NEXT_PUBLIC_DATAJUD_API_KEY ||
-  "APIKey cDZHYzlZa0JadVREZDJCendFbzVlQTU2S3pnMWYyYXU=";
+  "APIKey cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==";
 
 const TRIBUNAL_INDEX: Record<string, string> = {
   TJSP: "api_publica_tjsp",
