@@ -68,9 +68,14 @@ function buildQuery(params: SearchParams) {
   } else {
     const num = valor.replace(/\D/g, "");
     main = {
-      multi_match: {
-        query: num,
-        fields: ["partes.advogados.numeroOAB"],
+      nested: {
+        path: "partes",
+        query: {
+          nested: {
+            path: "partes.advogados",
+            query: { term: { "partes.advogados.numeroOAB": num } },
+          },
+        },
       },
     };
   }
@@ -97,9 +102,16 @@ export async function buscarProcessos(params: SearchParams): Promise<ProcessoRes
     size: 20,
   };
 
+  // Para busca por OAB, detecta o TJ pelo estado se não selecionado
+  let tribunalEfetivo = params.tribunal;
+  if (params.tipo === "oab" && !tribunalEfetivo) {
+    const uf = params.valor.match(/([A-Z]{2})$/i)?.[1]?.toUpperCase();
+    if (uf) tribunalEfetivo = `TJ${uf}`;
+  }
+
   const indices =
-    params.tribunal && TRIBUNAL_INDEX[params.tribunal]
-      ? [TRIBUNAL_INDEX[params.tribunal]]
+    tribunalEfetivo && TRIBUNAL_INDEX[tribunalEfetivo]
+      ? [TRIBUNAL_INDEX[tribunalEfetivo]]
       : Object.values(TRIBUNAL_INDEX).slice(0, 8);
 
   const results = await Promise.allSettled(indices.map((idx) => searchIndex(idx, body)));
